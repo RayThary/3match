@@ -28,7 +28,7 @@ public class Move : MonoBehaviour
     [SerializeField] private GameObject moveTarget;
     private Vector3 targetVec;
 
-    
+    private bool moving = false;
 
     void Start()
     {
@@ -48,7 +48,12 @@ public class Move : MonoBehaviour
     {
         if (targetVec != transform.position)
         {
+            moving = true;
             transform.position = Vector2.MoveTowards(transform.position, targetVec, speed * Time.deltaTime);
+        }
+        else
+        {
+            moving = false;
         }
     }
 

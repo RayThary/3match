@@ -152,15 +152,23 @@ public class GameStart : MonoBehaviour
         {
             if (blockObj[x, 8] == null)
             {
-                for (int y = 0; y < 8; y++)
+                int count = 10;//소환될 y의 위치 
+                for (int y = 0; y < 9; y++)
                 {
                     if (blockObj[x, y] == null)
                     {
-
+                        int objNum = Random.Range(0, 4);
+                        GameObject obj = Instantiate(spawnObjects[objNum], transform);
+                        obj.transform.position = new Vector3(x, count);
+                        count++;
+                        obj.GetComponent<Move>().SetMovePos(new Vector3(x, y, 0));
+                        blockObj[x, y] = obj.transform;
                     }
                 }
             }
         }
+
+        
     }
 
     public Transform[,] GetBlockArr()

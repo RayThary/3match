@@ -25,7 +25,7 @@ public class Move : MonoBehaviour
     private Transform[,] parentArr;
 
 
-    [SerializeField] private GameObject target;
+    [SerializeField] private GameObject moveTarget;
     private Vector3 targetVec;
 
     

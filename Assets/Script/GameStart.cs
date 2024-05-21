@@ -13,8 +13,8 @@ public class GameStart : MonoBehaviour
     [System.Serializable]
     public class allBlockObj
     {
-        public Transform[,] blockTrs= new Transform[9, 9];
-        
+        public Transform[,] blockTrs = new Transform[9, 9];
+
         public void SetBlcokTrs(Transform[,] _value)
         {
             blockTrs = _value;
@@ -25,6 +25,8 @@ public class GameStart : MonoBehaviour
         }
     }
     private allBlockObj block;
+
+    public bool x = false;
 
     private void Awake()
     {
@@ -43,7 +45,7 @@ public class GameStart : MonoBehaviour
             GameObject obj = Instantiate(spawnObjects[objNum], transform);
             obj.transform.position = new Vector3(x, y, 0);
             blockObj[x, y] = obj.transform;
-            
+
 
             x++;
 
@@ -60,7 +62,12 @@ public class GameStart : MonoBehaviour
     private void Update()
     {
         initArr();//배열좌표와 값을 똑같게 초기화시켜주는곳
-        arrMove();
+        arrMove();//블록들의 이동
+
+        if (x)
+        {
+            arrAdd();//블록추가
+        }
         if (Input.GetMouseButtonDown(0))
         {
             Debug.Log(blockObj[5, 8]);
@@ -77,6 +84,7 @@ public class GameStart : MonoBehaviour
 
     private void initArr()
     {
+        //row = 세로줄  column = 가로줄
         for (int row = 0; row < 9; row++)
         {
             for (int column = 0; column < 9; column++)
@@ -138,17 +146,19 @@ public class GameStart : MonoBehaviour
         }
     }
 
-    private void arrRemove()
+    private void arrAdd()
     {
-        for (int row = 0; row < 9; row++)
+        for (int x = 0; x < 9; x++)
         {
-            for (int column = 0; column < 9; column++)
+            if (blockObj[x, 8] == null)
             {
-                
-                //if (blockObj[row, column].GetComponent<>)
-                //{
-                    
-                //}
+                for (int y = 0; y < 8; y++)
+                {
+                    if (blockObj[x, y] == null)
+                    {
+
+                    }
+                }
             }
         }
     }

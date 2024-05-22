@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -8,7 +9,7 @@ public class GameStart : MonoBehaviour
 {
     [SerializeField] private List<GameObject> spawnObjects;
 
-    [SerializeField] private Transform[,] blockObj = new Transform[9, 9];
+    private Transform[,] blockObj = new Transform[9, 9];
 
     [System.Serializable]
     public class allBlockObj
@@ -26,8 +27,14 @@ public class GameStart : MonoBehaviour
     }
     private allBlockObj block;
 
-    public bool x = false;
+    [SerializeField] private List<Transform> exDestroy = new List<Transform>();
+    [SerializeField] private bool checkDestroy = false;
 
+    private Camera camera;
+    private Vector2 mousePos;
+
+    [SerializeField] private bool swipeCheck = false;
+    public bool dfjgnjkd = false;
     private void Awake()
     {
         block = new allBlockObj();
@@ -36,11 +43,7 @@ public class GameStart : MonoBehaviour
 
         for (int i = 0; i < 81; i++)
         {
-            if (i == 5 || i == 14 || i == 23 || i == 23 + 9 + 9 || i == 23 + 27)
-            {
-                x++;
-                continue;
-            }
+
             int objNum = Random.Range(0, 4);
             GameObject obj = Instantiate(spawnObjects[objNum], transform);
             obj.transform.position = new Vector3(x, y, 0);
@@ -57,30 +60,63 @@ public class GameStart : MonoBehaviour
         }
 
         block.SetBlcokTrs(blockObj);
+        camera = GameObject.Find("Camera").GetComponent<Camera>();
+
     }
 
     private void Update()
     {
-        initArr();//배열좌표와 값을 똑같게 초기화시켜주는곳
+        blockSwipe();
         arrMove();//블록들의 이동
+        arrAdd();//블록추가
 
-        if (x)
+        initArr();//배열좌표와 값을 똑같게 초기화시켜주는곳
+        blockDestroyHorizontal();//가로 파괴할곳찾기
+
+        blockDestroy();
+
+        if (Input.GetKeyDown(KeyCode.U))
         {
-            arrAdd();//블록추가
+            for (int i = 0; i < 9; i++)
+            {
+                for (int j = 0; j < 9; j++)
+                {
+                    Debug.Log($"blockObj[{i},{j}] = {blockObj[i, j]}");
+                }
+            }
         }
-        if (Input.GetMouseButtonDown(0))
-        {
-            Debug.Log(blockObj[5, 8]);
-            Debug.Log(blockObj[5, 7]);
-            Debug.Log(blockObj[5, 6]);
-            Debug.Log(blockObj[5, 5]);
-            Debug.Log(blockObj[5, 4]);
-            Debug.Log(blockObj[5, 3]);
-            Debug.Log(blockObj[5, 2]);
-            Debug.Log(blockObj[5, 1]);
-            Debug.Log(blockObj[5, 0]);
-        }
+
     }
+
+    private void blockDestroy()
+    {
+        if (dfjgnjkd == false)
+        {
+            return;
+        }
+        if (exDestroy.Count > 0)
+        {
+            for (int i = exDestroy.Count - 1; i > 0; i--)
+            {
+                Destroy(exDestroy[i].gameObject);
+                exDestroy.Remove(exDestroy[i]);
+
+            }
+        }
+        else
+        {
+            dfjgnjkd = false;
+        }
+
+    }
+    private void blockSwipe()
+    {
+
+
+
+    }
+
+
 
     private void initArr()
     {
@@ -91,6 +127,7 @@ public class GameStart : MonoBehaviour
             {
                 if (blockObj[row, column] == null)
                 {
+
                     if (column == 8)
                     {
                         break;
@@ -123,6 +160,7 @@ public class GameStart : MonoBehaviour
 
                     blockObj[row, column] = blockObj[row, column + columCount];
                     blockObj[row, column + columCount] = null;
+                    checkDestroy = true;
                 }
             }
         }
@@ -137,7 +175,7 @@ public class GameStart : MonoBehaviour
                 Vector3 targetPos = new Vector3(row, column, 0);
                 if (blockObj[row, column] != null)
                 {
-                    if (blockObj[row, column].position != targetPos)
+                    if (blockObj[row, column].GetComponent<Move>().GetTargetPos() != targetPos)
                     {
                         blockObj[row, column].GetComponent<Move>().SetMovePos(targetPos);
                     }
@@ -166,9 +204,103 @@ public class GameStart : MonoBehaviour
                     }
                 }
             }
+
+        }
+    }
+
+    private void blockDestroyHorizontal()
+    {
+        if (swipeCheck)
+        {
+            for (int color = 0; color < 5; color++)
+            {
+
+                for (int destroyY = 0; destroyY < 9; destroyY++)
+                {
+                    int des = 0;
+                    for (int destroyX = 0; destroyX < 9; destroyX++)
+                    {
+
+
+                        if (color == 0)
+                        {
+                            if (blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType() == Move.eType.Red)
+                            {
+                                des++;
+                            }
+                            else
+                            {
+                                des = 0;
+                            }
+                        }
+                        else if (color == 1)
+                        {
+                            if (blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType() == Move.eType.Blue)
+                            {
+                                des++;
+                            }
+                            else
+                            {
+                                des = 0;
+                            }
+                        }
+                        else if (color == 2)
+                        {
+                            if (blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType() == Move.eType.Green)
+                            {
+                                des++;
+                            }
+                            else
+                            {
+                                des = 0;
+                            }
+                        }
+                        else if (color == 3)
+                        {
+                            if (blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType() == Move.eType.Pink)
+                            {
+                                des++;
+                            }
+                            else
+                            {
+                                des = 0;
+                            }
+                        }
+                        else if (color == 4)
+                        {
+                            if (blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType() == Move.eType.Black)
+                            {
+                                des++;
+                            }
+                            else
+                            {
+                                des = 0;
+                            }
+                        }
+
+                        if (des == 3)
+                        {
+                            exDestroy.Add(blockObj[destroyX, destroyY]);
+                            exDestroy.Add(blockObj[destroyX - 1, destroyY]);
+                            exDestroy.Add(blockObj[destroyX - 2, destroyY]);
+                        }
+                        else if (des == 4)
+                        {
+                            exDestroy.Add(blockObj[destroyX, destroyY]);
+                            //점수증가? 
+                        }
+                        else if (des == 5)
+                        {
+                            exDestroy.Add(blockObj[destroyX, destroyY]);
+                            //폭탄? or 무언가 넣기
+                        }
+
+                    }
+                }
+            }
+            swipeCheck = false;
         }
 
-        
     }
 
     public Transform[,] GetBlockArr()

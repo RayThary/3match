@@ -16,17 +16,15 @@ public class Move : MonoBehaviour
     }
     [SerializeField] private eType type;
 
-    private bool horizontal = false;//if y+1의 type이 같으면 true
-    private bool vertical = false;// if x+1의 type이 같으면 true
+    [SerializeField] private bool horizontal = false;//if y+1의 type이 같으면 true
+    [SerializeField] private bool vertical = false;// if x+1의 type이 같으면 true
 
     [SerializeField] private float speed;
 
     private GameStart gamestart;
     private Transform[,] parentArr;
 
-
-    [SerializeField] private GameObject moveTarget;
-    private Vector3 targetVec;
+    [SerializeField] private Vector3 targetVec;
 
     private bool moving = false;
 
@@ -42,6 +40,8 @@ public class Move : MonoBehaviour
     void Update()
     {
         move();
+        hrizontalCheck();
+        verticalCheck();
     }
 
     private void move()
@@ -59,11 +59,26 @@ public class Move : MonoBehaviour
 
     private void hrizontalCheck()
     {
+        if (moving)
+        {
+            return;
+        }
         int x = (int)targetVec.x;
         int y = (int)targetVec.y;
-        if (parentArr[x, y].position == transform.position)
+
+        if (parentArr[x, y] == null)
+        {
+            return;
+        }
+
+
+        if (parentArr[x, y].position == targetVec)
         {
 
+            if (targetVec.x >= 8 || parentArr[x + 1, y] == null)
+            {
+                return;
+            }
             if (parentArr[x + 1, y].GetComponent<Move>().GetBlockType() == type)
             {
                 horizontal = true;
@@ -73,14 +88,27 @@ public class Move : MonoBehaviour
                 horizontal = false;
             }
         }
+
     }
 
     private void verticalCheck()
     {
+        if (moving)
+        {
+            return;
+        }
         int x = (int)targetVec.x;
         int y = (int)targetVec.y;
-        if (parentArr[x, y].position == transform.position)
+        if (parentArr[x, y] == null)
         {
+            return;
+        }
+        if (parentArr[x, y].position == targetVec)
+        {
+            if (targetVec.y >= 8 || parentArr[x, y + 1] == null)
+            {
+                return;
+            }
 
             if (parentArr[x, y + 1].GetComponent<Move>().GetBlockType() == type)
             {
@@ -93,7 +121,7 @@ public class Move : MonoBehaviour
         }
     }
 
-    private eType GetBlockType()
+    public eType GetBlockType()
     {
         return type;
     }
@@ -101,6 +129,11 @@ public class Move : MonoBehaviour
     public void SetMovePos(Vector3 _value)
     {
         targetVec = _value;
+    }
+
+    public Vector3 GetTargetPos()
+    {
+        return targetVec;
     }
 
     public bool GetHorizontal()

@@ -16,12 +16,10 @@ public class Move : MonoBehaviour
     }
     [SerializeField] private eType type;
 
-    [SerializeField] private bool horizontal = false;//if y+1의 type이 같으면 true
-    [SerializeField] private bool vertical = false;// if x+1의 type이 같으면 true
-
+ 
     [SerializeField] private float speed;
 
-    private GameStart gamestart;
+    private Game gamestart;
     private Transform[,] parentArr;
 
     [SerializeField] private Vector3 targetVec;
@@ -30,8 +28,8 @@ public class Move : MonoBehaviour
 
     void Start()
     {
-        gamestart = GetComponentInParent<GameStart>();
-        parentArr = gamestart.GetBlockArr();
+        gamestart = GetComponentInParent<Game>();
+        parentArr = gamestart.GetArr();
 
         targetVec = transform.position;
 
@@ -79,14 +77,7 @@ public class Move : MonoBehaviour
             {
                 return;
             }
-            if (parentArr[x + 1, y].GetComponent<Move>().GetBlockType() == type)
-            {
-                horizontal = true;
-            }
-            else
-            {
-                horizontal = false;
-            }
+
         }
 
     }
@@ -110,14 +101,6 @@ public class Move : MonoBehaviour
                 return;
             }
 
-            if (parentArr[x, y + 1].GetComponent<Move>().GetBlockType() == type)
-            {
-                vertical = true;
-            }
-            else
-            {
-                vertical = false;
-            }
         }
     }
 
@@ -136,14 +119,6 @@ public class Move : MonoBehaviour
         return targetVec;
     }
 
-    public bool GetHorizontal()
-    {
-        return horizontal;
-    }
 
-    public bool GetVertical()
-    {
-        return vertical;
-    }
 
 }

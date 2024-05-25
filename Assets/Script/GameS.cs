@@ -12,7 +12,7 @@ public class GameS : MonoBehaviour
     private List<Transform> destroyObjs = new List<Transform>();
     private void Start()
     {
-        blocks = Game.Instance.GetArr();
+        //blocks = Game.Instance.GetArr();
         StartCoroutine(blockDestroy());
     }
  

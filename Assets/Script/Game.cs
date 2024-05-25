@@ -6,10 +6,7 @@ using UnityEngine;
 
 public class Game : MonoBehaviour
 {
-    public static Game Instance;
-
     [SerializeField] private List<GameObject> GameObjects;
-
 
     private Transform[,] blockObj = new Transform[9, 9];
 
@@ -19,15 +16,10 @@ public class Game : MonoBehaviour
     private bool destroyCheck = false;
     private bool objPosCheck = false;
 
-    private void Awake()
-    {
-        Instance = this;
-        objectCreate();
-    }
     void Start()
     {
-        //objectCreate();
-        //StartCoroutine(blockDestroy());
+        objectCreate();
+        StartCoroutine(blockDestroy());
     }
     private void objectCreate()
     {

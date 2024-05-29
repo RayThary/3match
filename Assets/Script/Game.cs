@@ -12,9 +12,12 @@ public class Game : MonoBehaviour
 
     private List<Transform> destroyObjs = new List<Transform>();
     int columCount;
+    int yPos;
 
-    private bool destroyCheck = false;
-    private bool objPosCheck = false;
+    private bool destroyCheck = false;//파괴할지 체크하는곳
+
+    private bool objPosCheck = false;//파괴를위한 오브젝트의 위치체크
+    [SerializeField] private bool objPosCreateCheck = false; //만들기위한 오브젝트의 위치체크
 
     void Start()
     {
@@ -41,39 +44,39 @@ public class Game : MonoBehaviour
     {
 
 
-        //initArr();//2차배열이 좌표와 포지션이맞게 정해줌
-        //arrMove();
+        initArr();//2차배열이 좌표와 포지션이맞게 정해줌
+        objMove();
+        objPostionCheck();
+        objCreate();
+        objDestroy();
 
-        //objDestroy();
     }
 
     private void initArr()
     {
-        for (int y = 0; y < 9; y++)
+        for (int x = 0; x < 9; x++)
         {
-            for (int x = 0; x < 9; x++)
+            for (int y = 0; y < 9; y++)
             {
                 if (blockObj[x, y] == null)
                 {
 
-                    columCount = 1;
-
-                    if (blockObj[x, 8] == null || y == 8)
+                    if (y == 8)
                     {
                         break;
                     }
-
+                    int columCount = 1;
 
                     for (int i = 1; i < 9; i++)
                     {
-                        int ypos = y + i;
+                        int yPos = y + i;
 
-                        if (ypos > 8)
+                        if (yPos >= 9)
                         {
                             break;
                         }
 
-                        if (blockObj[x, ypos] == null)
+                        if (blockObj[x, yPos] == null)
                         {
                             columCount++;
                         }
@@ -83,41 +86,66 @@ public class Game : MonoBehaviour
                         }
                     }
 
+                    if (y + columCount > 8)
+                    {
+                        break;
+                    }
+
                     blockObj[x, y] = blockObj[x, y + columCount];
-                    blockObj[x + columCount, y] = null;
+                    blockObj[x, y + columCount] = null;
                     destroyCheck = true;
                 }
             }
-        }
+            #region
+            //for (int y = 0; y < 9; y++)
+            //{
+            //    for (int x = 0; x < 9; x++)
+            //    {
+            //        if (blockObj[x, y] == null)
+            //        {
+            //            if (y == 8)
+            //            {
+            //                break;
+            //            }
 
-        int posCheck = 0;
+            //            columCount = 1;
+            //            for (int i = 1; i < 9; i++)
+            //            {
+            //                int yPos = y + i;
 
-        for (int y = 0; y < 9; y++)
-        {
-            for (int x = 0; x < 9; x++)
-            {
-                if (blockObj[x, y].position != new Vector3(x, y, 0))
-                {
-                    posCheck++;
-                }
-                else if (blockObj[x, y] == null)
-                {
-                    continue;
-                }
-            }
-        }
+            //                if (yPos >= 9)
+            //                {
+            //                    break;
+            //                }
 
-        if (posCheck > 0)
-        {
-            objPosCheck = false;
-        }
-        else
-        {
-            objPosCheck = true;
+            //                if (blockObj[x, yPos] == null)
+            //                {
+            //                    columCount++;
+            //                }
+            //                else
+            //                {
+            //                    break;
+            //                }
+
+            //            }
+
+            //            if (y + columCount > 8)
+            //            {
+            //                break;
+            //            }
+
+            //            blockObj[x, y] = blockObj[x, y + columCount];
+            //            blockObj[x, y + columCount] = null;
+            //            destroyCheck = true;
+
+            //        }
+            //    }
+            //}
+            #endregion
         }
     }
 
-    private void arrMove()
+    private void objMove()
     {
         for (int row = 0; row < 9; row++)
         {
@@ -135,26 +163,99 @@ public class Game : MonoBehaviour
         }
     }
 
+    private void objCreate()
+    {
+        if (objPosCreateCheck)
+        {
+            for (int x = 0; x < 9; x++)
+            {
+                if (blockObj[x, 8] == null)
+                {
+                    int count = 11;//소환될 y의 위치 
+                    for (int y = 0; y < 9; y++)
+                    {
+                        if (blockObj[x, y] == null)
+                        {
+                            int objNum = Random.Range(0, 4);
+                            GameObject obj = Instantiate(GameObjects[objNum], transform);
+                            obj.transform.position = new Vector3(x, count);
+                            count++;
+                            obj.GetComponent<Move>().SetMovePos(new Vector3(x, y, 0));
+                            blockObj[x, y] = obj.transform;
+                        }
+                    }
+                }
+            }
+            objPosCreateCheck = false;
+        }
+    }
+
+    private void objPostionCheck()
+    {
+        int posCheck = 0;
+
+        for (int y = 0; y < 9; y++)
+        {
+            for (int x = 0; x < 9; x++)
+            {
+                if (blockObj[x, y] != null && blockObj[x, y].position != new Vector3(x, y, 0))
+                {
+                    posCheck++;
+                }
+
+                
+
+
+            }
+        }
+
+        if (posCheck == 0)
+        {
+            objPosCheck = true;
+            objPosCreateCheck = true;
+        }
+        else
+        {
+            objPosCheck = false;
+        }
+
+
+    }
+
     private void objDestroy()
     {
         if (destroyCheck && objPosCheck)
         {
             StartCoroutine(blockDestroy());
+            objPosCheck = false;
+            destroyCheck = false;
         }
     }
 
     IEnumerator blockDestroy()
     {
-        yield return null;
         destroyOjbHrizontalAdd();
         destroyOjbVerticalAdd();
         //점수 스크립트
+        yield return new WaitForSeconds(0.5f);
 
         if (destroyObjs.Count > 0)
         {
             for (int i = destroyObjs.Count - 1; i >= 0; i--)
             {
-                Destroy(destroyObjs[i].gameObject);
+                if (destroyObjs[i] == null)
+                {
+                    continue;
+                }
+                else
+                {
+                    Destroy(destroyObjs[i].gameObject);
+                }
+
+                if (i == 0)
+                {
+                    destroyObjs.Clear();
+                }
             }
         }
 
@@ -167,8 +268,8 @@ public class Game : MonoBehaviour
 
             for (int destroyY = 0; destroyY < 9; destroyY++)
             {
-                int des = 0;
 
+                int des = 0;
                 for (int destroyX = 0; destroyX < 9; destroyX++)
                 {
                     if (blockObj[destroyX, destroyY] == null)
@@ -176,62 +277,16 @@ public class Game : MonoBehaviour
                         continue;
                     }
 
+                    if (color == (int)blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType())
+                    {
+                        des++;
+                    }
+                    else
+                    {
+                        des = 0;
+                    }
 
-                    if (color == 0)
-                    {
-                        if (blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType() == Move.eType.Red)
-                        {
-                            des++;
-                        }
-                        else
-                        {
-                            des = 0;
-                        }
-                    }
-                    else if (color == 1)
-                    {
-                        if (blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType() == Move.eType.Blue)
-                        {
-                            des++;
-                        }
-                        else
-                        {
-                            des = 0;
-                        }
-                    }
-                    else if (color == 2)
-                    {
-                        if (blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType() == Move.eType.Green)
-                        {
-                            des++;
-                        }
-                        else
-                        {
-                            des = 0;
-                        }
-                    }
-                    else if (color == 3)
-                    {
-                        if (blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType() == Move.eType.Pink)
-                        {
-                            des++;
-                        }
-                        else
-                        {
-                            des = 0;
-                        }
-                    }
-                    else if (color == 4)
-                    {
-                        if (blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType() == Move.eType.Black)
-                        {
-                            des++;
-                        }
-                        else
-                        {
-                            des = 0;
-                        }
-                    }
+
 
                     if (des == 3)
                     {
@@ -273,60 +328,13 @@ public class Game : MonoBehaviour
                         continue;
                     }
 
-                    if (color == 0)
+                    if (color == (int)blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType())
                     {
-                        if (blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType() == Move.eType.Red)
-                        {
-                            des++;
-                        }
-                        else
-                        {
-                            des = 0;
-                        }
+                        des++;
                     }
-                    else if (color == 1)
+                    else
                     {
-                        if (blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType() == Move.eType.Blue)
-                        {
-                            des++;
-                        }
-                        else
-                        {
-                            des = 0;
-                        }
-                    }
-                    else if (color == 2)
-                    {
-                        if (blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType() == Move.eType.Green)
-                        {
-                            des++;
-                        }
-                        else
-                        {
-                            des = 0;
-                        }
-                    }
-                    else if (color == 3)
-                    {
-                        if (blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType() == Move.eType.Pink)
-                        {
-                            des++;
-                        }
-                        else
-                        {
-                            des = 0;
-                        }
-                    }
-                    else if (color == 4)
-                    {
-                        if (blockObj[destroyX, destroyY].GetComponent<Move>().GetBlockType() == Move.eType.Black)
-                        {
-                            des++;
-                        }
-                        else
-                        {
-                            des = 0;
-                        }
+                        des = 0;
                     }
 
                     if (des == 3)

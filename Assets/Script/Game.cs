@@ -194,6 +194,7 @@ public class Game : MonoBehaviour
     {
         int posCheck = 0;
 
+        int nullObjNum = 0;
         for (int y = 0; y < 9; y++)
         {
             for (int x = 0; x < 9; x++)
@@ -203,21 +204,33 @@ public class Game : MonoBehaviour
                     posCheck++;
                 }
 
-                
+                if (blockObj[x, y] == null)
+                {
+                    nullObjNum++;
+                }
+
+                if (blockObj[8, 8])
+                {
+                    if (posCheck == 0)
+                    {
+                        if (nullObjNum == 0)
+                        {
+
+                            objPosCheck = true;
+                        }
+                        objPosCreateCheck = true;
+                    }
+                }
+                else
+                {
+                    objPosCheck = false;
+                }
 
 
             }
         }
 
-        if (posCheck == 0)
-        {
-            objPosCheck = true;
-            objPosCreateCheck = true;
-        }
-        else
-        {
-            objPosCheck = false;
-        }
+
 
 
     }
@@ -236,7 +249,7 @@ public class Game : MonoBehaviour
     {
         destroyOjbHrizontalAdd();
         destroyOjbVerticalAdd();
-        //점수 스크립트
+        //점수 스크립트 만들예정
         yield return new WaitForSeconds(0.5f);
 
         if (destroyObjs.Count > 0)

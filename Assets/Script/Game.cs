@@ -19,6 +19,7 @@ public class Game : MonoBehaviour
     private bool objPosCheck = false;//파괴를위한 오브젝트의 위치체크
     [SerializeField] private bool objPosCreateCheck = false; //만들기위한 오브젝트의 위치체크
 
+    
     void Start()
     {
         objectCreate();

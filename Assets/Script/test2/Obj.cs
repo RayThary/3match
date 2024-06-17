@@ -8,73 +8,113 @@ public class Obj : MonoBehaviour
 
     [SerializeField] private int x;
     [SerializeField] private int y;
+    public int GetY { get { return y; } }
 
     private Vector2 touchOnePos;
     private Vector2 touchTwoPos;
 
+    private GameObject oneObj;
 
     private int tempX;
     private int tempY;
 
     private GameStart gameStart;
 
-    private bool returnMove = false;
+    private bool moveChange = false;
+    public bool SetMoveChange { set => moveChange = value; }
 
-    private bool moveCheck = false;
-    private bool clickCheck = false;
+    private bool moveCheck = false;//좌우움직임
+    private bool returnMove = false;//좌우움직임 이후 다시되돌아갈건지에관한내용
 
-    private bool firstTouchCheck = false;
-    private int oneX;
-    private int oneY;
-    private int twoX;
-    private int twoY;
+    private bool moveDownCheck = false;//아래로만움직임
 
-    [SerializeField] private bool isFirst = false;
-    [SerializeField] private bool isSecond = false;
+    private bool clickCheck = false;//첫번째 두번째 클릭해줬는지 체크해주고 어딜클릭했었는지 알려주기위한곳
+
+    private bool createCheck = false;//이오브젝트가 추가로생성된오브젝트인지 알려주는곳
+
+
 
     private SpriteRenderer spr;
     private Color color;
 
     [SerializeField] private bool matchCheck = false;
+    private bool matchStart = false;
 
     private void OnMouseDown()
     {
-        if (gameStart.GetMoving == true)
+        if (gameStart.GetMoving() == true)
         {
             return;
         }
 
-        Vector2 pos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-
-        pos.x = Mathf.Floor(pos.x);
-        pos.y = Mathf.Floor(pos.y);
-
-
-        firstTouchCheck = gameStart.GetfirstTouch();
-
-        if (firstTouchCheck)
+        if (gameStart.getFristTouch == false)
         {
-            gameStart.GetOneObj.GetComponent<Obj>().SetClickCheck(false);
-            twoX = (int)pos.x;
-            twoY = (int)pos.y;
-            gameStart.SetTwoObj = transform.gameObject;
+            //첫번째클릭인지 체크
+            clickCheck = true;
+            gameStart.SetOneObj = gameObject;
+            gameStart.setFristTouch = true;
 
-            isSecond = true;
-            objChange();
-
-            gameStart.SetfirstTouch(false);
         }
         else
         {
-            clickCheck = true;
+            gameStart.setFristTouch = false;
+            gameStart.SetTwoObj = gameObject;
+            oneObj = gameStart.GetOneObj;
+            //첫번째가 골라진상태에서 두번째 체크시 첫번째 오브젝트와 두번째 오브젝트의 위치를 받아주고 교환가능한지 체크를해준다
+            touchOnePos = gameStart.GetOneObj.transform.position;
+            touchTwoPos = transform.position;
+            objChangeCheck();
 
-            oneX = (int)pos.x;
-            oneY = (int)pos.y;
-            isFirst = true;
-            gameStart.SetOneObj = transform.gameObject;
-            gameStart.SetfirstTouch(true);
 
         }
+    }
+    private void objChangeCheck()
+    {
+        if (touchTwoPos.x == touchOnePos.x - 1 && touchOnePos.y == touchTwoPos.y)
+        {
+            moveChange = true;
+            oneObj.GetComponent<Obj>().SetMoveChange = true;
+        }
+        else if (touchTwoPos.x == touchOnePos.x + 1 && touchOnePos.y == touchTwoPos.y)
+        {
+            moveChange = true;
+            oneObj.GetComponent<Obj>().SetMoveChange = true;
+        }
+        else if (touchTwoPos.y == touchOnePos.y - 1 && touchOnePos.x == touchTwoPos.x)
+        {
+            moveChange = true;
+            oneObj.GetComponent<Obj>().SetMoveChange = true;
+        }
+        else if (touchTwoPos.y == touchOnePos.y + 1 && touchOnePos.x == touchTwoPos.x)
+        {
+            moveChange = true;
+            oneObj.GetComponent<Obj>().SetMoveChange = true;
+        }
+        else
+        {
+            Debug.Log("이동불가");
+        }
+
+        if (moveChange)
+        {
+            gameStart.SetMoving(true);
+            x = oneObj.GetComponent<Obj>().GetXY(true);
+            y = oneObj.GetComponent<Obj>().GetXY(false);
+            oneObj.GetComponent<Obj>().SetXY(tempX, tempY);
+
+            gameStart.allObjs[x, y] = gameObject;
+            gameStart.allObjs[tempX, tempY] = oneObj;
+        }
+
+        for (int x = 0; x < 9; x++)
+        {
+            for (int y = 0; y < 9; y++)
+            {
+                gameStart.allObjs[x, y].GetComponent<Obj>().SetMatchStart(true);
+            }
+        }
+
+
 
 
 
@@ -86,22 +126,21 @@ public class Obj : MonoBehaviour
         gameStart = FindObjectOfType<GameStart>();
         spr = GetComponent<SpriteRenderer>();
         color = spr.color;
-        x = (int)transform.position.x;
-        y = (int)transform.position.y;
-        tempX = x;
-        tempY = y;
+        if (createCheck == false)
+        {
+            x = (int)transform.position.x;
+            y = (int)transform.position.y;
+            tempX = x;
+            tempY = y;
+        }
 
-        findMatch();
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (isFirst && isSecond)
-        {
-            Debug.Log("두개의 true");
-        }
-        //mouseDownCheck();
+
+        findMatch();
         if (matchCheck)
         {
             spr.color = new Color(1, 1, 1);
@@ -111,16 +150,21 @@ public class Obj : MonoBehaviour
             objClickChekc();
         }
 
-        objMove();
+        objChangeMove();
+        objDownMove();
     }
 
     private void objClickChekc()
     {
         if (clickCheck)
         {
-
             color.a = 0.5f;
             spr.color = color;
+
+            if (gameStart.getFristTouch == false)
+            {
+                clickCheck = false;
+            }
         }
         else
         {
@@ -132,257 +176,120 @@ public class Obj : MonoBehaviour
 
 
 
-    private void objMove()
+    private void objChangeMove()
     {
-        if (moveCheck)
+        if (moveChange)
         {
             transform.position = Vector2.MoveTowards(transform.position, new Vector2(x, y), Time.deltaTime * moveSpeed);
-
             if (transform.position == new Vector3(x, y, 0))
             {
-                if (isFirst || isSecond)
+                if (gameStart.GetOneObj.GetComponent<Obj>().GetMatchCheck() == false && gameStart.GetTwoObj.GetComponent<Obj>().GetMatchCheck() == false)
                 {
-                    gameStart.allObjs[x, y] = transform.gameObject;
 
-                    findMatch();
-                    if (isFirst)
-                    {
-                        if (gameStart.GetTwoObj.GetComponent<Obj>().GetMatchCheck() || matchCheck)
-                        {
-                            tempX = x;
-                            tempY = y;
-                        }
-                        else
-                        {
-                            x = tempX;
-                            y = tempY;
-                            gameStart.allObjs[x, y] = transform.gameObject;
-                        }
-                    }
-                    else if (isSecond)
-                    {
-                        if (gameStart.GetOneObj.GetComponent<Obj>().GetMatchCheck() || matchCheck)
-                        {
-                            tempX = x;
-                            tempY = y;
-                        }
-                        else
-                        {
-                            x = tempX;
-                            y = tempY;
-                            gameStart.allObjs[x, y] = transform.gameObject;
-                        }
-                    }
 
-                    isFirst = false;
-                    isSecond = false;
-                    gameStart.SetMoveCheck(false);
+                    gameStart.allObjs[x, y] = oneObj;
+                    gameStart.allObjs[tempX, tempY] = gameObject;
+                    x = tempX;
+                    y = tempY;
+                    returnMove = true;
+
                 }
-
-                if (transform.position == new Vector3(x, y, 0))
+                else
                 {
-                    moveCheck = false;
+                    tempX = x;
+                    tempY = y;
+                    moveChange = false;
+                    transform.name = "(" + x + "," + y + ")";
+                    gameStart.SetMoving(false);
                 }
-
-
-
-                #region
-                //objReturnCheck();
-
-                //if (returnMove && transform.position == new Vector3(x, y, 0))
-                //{
-                //    gameStart.allObjs[x, y] = transform.gameObject;
-
-                //    gameStart.SetMoveCheck(false);
-                //    returnMove = false;
-                //    moveCheck = false;
-                //}
-                //game
-                #endregion
             }
-
-
         }
-    }
 
-    private void objReturnCheck()
-    {
-        if (gameStart.allObjs[tempX, tempY].GetComponent<Obj>().GetMatchCheck() == true || matchCheck == true)
+
+        if (returnMove)
         {
-            returnMove = false;
-            tempX = x;
-            tempY = y;
-
-            transform.name = "(" + x + "," + y + ")";
-
-            gameStart.SetMoveCheck(false);
-            moveCheck = false;
-        }
-        else
-        {
-            returnMove = true;
-
-            x = tempX;
-            y = tempY;
-
-        }
-    }
-
-    private void mouseDownCheck()
-    {
-        if (Input.GetMouseButtonDown(0))
-        {
-            if (gameStart.GetMoving == true)
+            transform.position = Vector2.MoveTowards(transform.position, new Vector2(x, y), Time.deltaTime * moveSpeed * moveSpeed);
+            if (transform.position == new Vector3(x, y, 0))
             {
-
-                return;
-            }
-
-            Vector2 pos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-
-
-            if (pos.x >= 0 && pos.x < gameStart.X && pos.y >= 0 && pos.y < gameStart.Y)
-            {
-                pos.x = Mathf.Floor(pos.x);
-                pos.y = Mathf.Floor(pos.y);
-
-                if (transform.position == new Vector3(pos.x, pos.y, 0))
-                {
-                    firstTouchCheck = gameStart.GetfirstTouch();
-
-
-                    if (firstTouchCheck)
-                    {
-                        gameStart.GetOneObj.GetComponent<Obj>().SetClickCheck(false);
-                        twoX = (int)pos.x;
-                        twoY = (int)pos.y;
-                        gameStart.SetTwoObj = transform.gameObject;
-
-                        isSecond = true;
-                        objChange();
-
-                        gameStart.SetfirstTouch(false);
-                    }
-                    else
-                    {
-                        clickCheck = true;
-
-                        oneX = (int)pos.x;
-                        oneY = (int)pos.y;
-                        isFirst = true;
-                        gameStart.SetOneObj = transform.gameObject;
-                        gameStart.SetfirstTouch(true);
-
-                    }
-                }
-
-
+                returnMove = true;
+                gameStart.SetMoving(false);
             }
         }
     }
 
-    private void objChange()
+
+    private void objDownMove()
     {
-
-        touchOnePos = gameStart.GetOneObj.transform.position;
-        touchTwoPos = transform.position;
-
-
-        if (touchTwoPos.x == touchOnePos.x - 1 && touchOnePos.y == touchTwoPos.y)
+        if (moveDownCheck)
         {
-            gameStart.GetOneObj.GetComponent<Obj>().SetXY(x, y);
-            x = (int)touchOnePos.x;
-            y = (int)touchOnePos.y;
-
-            gameStart.SetMoveCheck(true);
-            gameStart.GetOneObj.GetComponent<Obj>().SetMoveCheck(true);
-            moveCheck = true;
-        }
-        else if (touchTwoPos.x == touchOnePos.x + 1 && touchOnePos.y == touchTwoPos.y)
-        {
-
-            gameStart.GetOneObj.GetComponent<Obj>().SetXY(x, y);
-            x = (int)touchOnePos.x;
-            y = (int)touchOnePos.y;
-
-            gameStart.SetMoveCheck(true);
-            gameStart.GetOneObj.GetComponent<Obj>().SetMoveCheck(true);
-            moveCheck = true;
-        }
-        else if (touchTwoPos.y == touchOnePos.y - 1 && touchOnePos.x == touchTwoPos.x)
-        {
-
-            gameStart.GetOneObj.GetComponent<Obj>().SetXY(x, y);
-            x = (int)touchOnePos.x;
-            y = (int)touchOnePos.y;
-
-            gameStart.SetMoveCheck(true);
-            gameStart.GetOneObj.GetComponent<Obj>().SetMoveCheck(true);
-            moveCheck = true;
-        }
-        else if (touchTwoPos.y == touchOnePos.y + 1 && touchOnePos.x == touchTwoPos.x)
-        {
-
-            gameStart.GetOneObj.GetComponent<Obj>().SetXY(x, y);
-            x = (int)touchOnePos.x;
-            y = (int)touchOnePos.y;
-
-            gameStart.SetMoveCheck(true);
-            gameStart.GetOneObj.GetComponent<Obj>().SetMoveCheck(true);
-            moveCheck = true;
-        }
-        else
-        {
-            gameStart.SetMoveCheck(false);
-            isFirst = false;
-            isSecond = false;
-
-            moveCheck = false;
-            Debug.Log("이동불가");
+            transform.position = Vector2.MoveTowards(transform.position, new Vector2(x, y), Time.deltaTime * 5);
+            if (transform.position == new Vector3(x, y, 0))
+            {
+                moveDownCheck = false;
+                tempX = x;
+                tempY = y;
+                transform.name = "(" + x + "," + y + ")";
+                gameStart.SetMoving(false);
+            }
         }
     }
+
 
     private void findMatch()
     {
-
-        if (x > 0 && x < gameStart.X - 1)
+        if (matchStart)
         {
-            GameObject leftObj = gameStart.allObjs[x - 1, y];
-            GameObject rightObj = gameStart.allObjs[x + 1, y];
-            if (leftObj != transform && rightObj != transform && leftObj != rightObj)
+            if (moveDownCheck || moveChange)
             {
+                return;
+            }
 
-                if (leftObj.tag == this.gameObject.tag && rightObj.tag == this.gameObject.tag)
+            if (x > 0 && x < gameStart.X - 1)
+            {
+                GameObject leftObj = gameStart.allObjs[x - 1, y];
+                GameObject rightObj = gameStart.allObjs[x + 1, y];
+                if (leftObj != transform && rightObj != transform && leftObj != rightObj)
                 {
-                    leftObj.GetComponent<Obj>().IsMatch();
-                    rightObj.GetComponent<Obj>().IsMatch();
-                    matchCheck = true;
 
-                    gameObject.tag = "tempDestroy";
-                    leftObj.tag = "tempDestroy";
-                    rightObj.tag = "tempDestroy";
+                    if (leftObj.tag == this.gameObject.tag && rightObj.tag == this.gameObject.tag)
+                    {
+                        leftObj.GetComponent<Obj>().IsMatch();
+                        rightObj.GetComponent<Obj>().IsMatch();
+                        matchCheck = true;
+
+                        gameStart.AddDestrtoyObj(leftObj);
+                        gameStart.AddDestrtoyObj(rightObj);
+                        gameStart.AddDestrtoyObj(gameObject);
+                    }
                 }
             }
-        }
 
-        if (y > 0 && y < gameStart.Y - 1)
-        {
-            GameObject downObj = gameStart.allObjs[x, y - 1];
-            GameObject upObj = gameStart.allObjs[x, y + 1];
-            if (downObj != transform && upObj != transform && downObj != upObj)
+            if (y > 0 && y < gameStart.Y - 1)
             {
-                if (downObj.tag == this.gameObject.tag && upObj.tag == this.gameObject.tag)
+                GameObject downObj = gameStart.allObjs[x, y - 1];
+                GameObject upObj = gameStart.allObjs[x, y + 1];
+                if (downObj != transform && upObj != transform && downObj != upObj)
                 {
-                    downObj.GetComponent<Obj>().IsMatch();
-                    upObj.GetComponent<Obj>().IsMatch();
-                    matchCheck = true;
+                    if (downObj.tag == this.gameObject.tag && upObj.tag == this.gameObject.tag)
+                    {
+                        downObj.GetComponent<Obj>().IsMatch();
+                        upObj.GetComponent<Obj>().IsMatch();
+                        matchCheck = true;
 
 
-                    gameObject.tag = "tempDestroy";
-                    downObj.tag = "tempDestroy";
-                    upObj.tag = "tempDestroy";
+                        gameStart.AddDestrtoyObj(downObj);
+                        gameStart.AddDestrtoyObj(upObj);
+                        gameStart.AddDestrtoyObj(gameObject);
+                    }
                 }
             }
+
+            if (x == 8 && y == 8)//xy의마지막값
+            {
+                gameStart.DestroyCheck = true;
+            }
+
+            matchStart = false;
         }
     }
 
@@ -392,24 +299,48 @@ public class Obj : MonoBehaviour
         y = _y;
     }
 
+    /// <summary>
+    /// true일땐 x가 리턴 false 일땐 y가리턴
+    /// </summary>
+    /// <param name="_value">true일땐 x가 리턴 false 일땐 y가리턴</param>
+    /// <returns></returns>
+    public int GetXY(bool _value)
+    {
+        if (_value)
+        {
+            return x;
+        }
+        else
+        {
+            return y;
+        }
+    }
+
+    public void SetChangeMove()
+    {
+        moveChange = true;
+    }
 
     public bool GetMatchCheck()
     {
         return matchCheck;
     }
 
-    public void SetMoveCheck(bool _value)
-    {
-        moveCheck = _value;
-    }
-
-    public void SetClickCheck(bool _value)
-    {
-        clickCheck = _value;
-    }
-
     public void IsMatch()
     {
         matchCheck = true;
     }
+
+    public void SetMatchStart(bool _value)
+    {
+        matchStart = _value;
+    }
+    public void SetMoveDown(int _x, int _y, bool _value)
+    {
+        x = _x;
+        y = _y;
+        createCheck = _value;
+        moveDownCheck = true;
+    }
+
 }

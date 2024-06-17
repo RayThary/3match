@@ -4,12 +4,13 @@
 TagManager:
   serializedVersion: 2
   tags:
-  - Black
   - Blue
-  - Pink
+  - Cream
+  - Crown
   - Green
-  - Red
-  - tempDestroy
+  - Pink
+  - Pureple
+  - Orange
   layers:
   - Default
   - TransparentFX

@@ -10,7 +10,7 @@ public class Board : MonoBehaviour
 {
     public static Board Instance;
     [SerializeField] private int targetScore = 100;
-    public int GetTargetScore {  get { return targetScore; } }
+    public int GetTargetScore { get { return targetScore; } }
 
     [SerializeField] private float timeLimit = 60;
     public float GetTimer { get { return timeLimit; } }
@@ -51,18 +51,20 @@ public class Board : MonoBehaviour
     private int secondX = 0;
     private int secondY = 0;
 
+    private bool isFade = false;
+    private float fadeTimer = 0;
 
     private void Awake()
     {
         if (Instance == null)
         {
-        Instance = this;
+            Instance = this;
         }
         else
         {
             Destroy(gameObject);
         }
-        
+
         Fade fade = FindObjectOfType<Fade>();
         fade.FadeStart();
     }
@@ -155,7 +157,7 @@ public class Board : MonoBehaviour
 
 
 
-   
+
 
     void Start()
     {
@@ -457,6 +459,7 @@ public class Board : MonoBehaviour
     }
     void Update()
     {
+        fadeCheck();
         allDownCheck();
         clickCheck();
         clearCheck();
@@ -473,8 +476,27 @@ public class Board : MonoBehaviour
                 }
             }
         }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
 
+
+    }
+
+    private void fadeCheck()
+    {
+        if (swappingTouchCheck)
+        {
+            if (fadeTimer >= 1)
+            {
+                isFade = true;
+            }
+            else
+            {
+                fadeTimer += Time.deltaTime;
+            }
+        }
+        else
+        {
+            fadeTimer = 0;
+        }
     }
 
     private void allDownCheck()
@@ -615,9 +637,9 @@ public class Board : MonoBehaviour
         boardOutCheck = true;
     }
 
-    public bool GetTouchChec()
+    public bool GetFade()
     {
-        return swappingTouchCheck;
+        return isFade;
     }
 
     public void SetPoint(int _point)

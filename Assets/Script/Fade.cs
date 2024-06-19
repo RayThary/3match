@@ -24,7 +24,7 @@ public class Fade : MonoBehaviour
         if (isFade)
         {
             Board.Instance.SetPoint(0);
-            if (Board.Instance.GetTouchChec() == true)
+            if (Board.Instance.GetFade() == true)
             {
                 color.a -= Time.deltaTime;
                 fadeImage.color = color;

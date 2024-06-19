@@ -29,10 +29,7 @@ public class BlockObj : MonoBehaviour
     private Vector2 changePos;
     private Vector2 targetPos;//다운무브용 
 
-
-    private bool isMoving = false;
-    private bool downMove = false;
-    
+    private bool downMove = false;    
 
     private bool swapCheck = false;
     private bool swapReturnCheck = false;
@@ -75,14 +72,10 @@ public class BlockObj : MonoBehaviour
     {
         if (downMove)
         {
-
-            isMoving = true;
-
             transform.position = Vector2.MoveTowards(transform.position, new Vector2(x, y), Time.deltaTime * boardDownSpeed);
             if (transform.position.y == y)
             {
                 downMove = false;
-                isMoving = false;
             }
         }
  

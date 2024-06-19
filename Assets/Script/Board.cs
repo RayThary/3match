@@ -9,8 +9,12 @@ using Random = UnityEngine.Random;
 public class Board : MonoBehaviour
 {
     public static Board Instance;
+    [SerializeField] private int targetScore = 100;
+    public int GetTargetScore {  get { return targetScore; } }
 
-    public SpriteRenderer btn;//임시 클릭가능한지 보여주기위해 잠시만들어준곳
+    [SerializeField] private float timeLimit = 60;
+    public float GetTimer { get { return timeLimit; } }
+
     [SerializeField] private int point = 0;
     public int GetPoint { get { return point; } }
 
@@ -29,7 +33,7 @@ public class Board : MonoBehaviour
     private bool newBlockCheck = false;
     private bool objClickCheck = false;
 
-    private bool swappingToucchCheck = false;//오브젝트가 안움직이고 바꾸기위한준비가되었는지 체크해주는부분
+    private bool swappingTouchCheck = false;//오브젝트가 안움직이고 바꾸기위한준비가되었는지 체크해주는부분
 
     private GameObject lastBlockObj;
 
@@ -47,17 +51,25 @@ public class Board : MonoBehaviour
     private int secondX = 0;
     private int secondY = 0;
 
-    private bool isFade = true;
 
     private void Awake()
     {
+        if (Instance == null)
+        {
         Instance = this;
-        isFade = true;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+        
+        Fade fade = FindObjectOfType<Fade>();
+        fade.FadeStart();
     }
 
     private void OnMouseDown()
     {
-        if (swappingToucchCheck)
+        if (swappingTouchCheck)
         {
             if (firstClick == true)
             {
@@ -343,10 +355,6 @@ public class Board : MonoBehaviour
                 Destroy(removeBlock[count]);
                 removeBlock.RemoveAt(count);
             }
-            if (count == 0)
-            {
-                Invoke("pointAdd", 0.1f);
-            }
         }
         removeBlock.Clear();
         Invoke("blockDown", 0.1f);
@@ -451,6 +459,8 @@ public class Board : MonoBehaviour
     {
         allDownCheck();
         clickCheck();
+        clearCheck();
+
         if (Input.GetKeyDown(KeyCode.X))
         {
             for (int x = 0; x < width; x++)
@@ -513,8 +523,6 @@ public class Board : MonoBehaviour
                 {
                     if (blockArray[x, y] == null)
                     {
-
-                        Debug.Log($"{x},{y} 가 null = {blockArray[x, y]}");
                         continue;
                     }
                     if (blockArray[x, y].transform.position != new Vector3(x, y, 0))
@@ -550,8 +558,7 @@ public class Board : MonoBehaviour
             {
                 if (blockArray[x, y] == null)
                 {
-                    btn.color = Color.black;
-                    swappingToucchCheck = false;
+                    swappingTouchCheck = false;
                     nullCheck = true;
                 }
                 if (x == width - 1 && y == height - 1)
@@ -584,8 +591,7 @@ public class Board : MonoBehaviour
                     {
                         if (clickCheck == false)
                         {
-                            btn.color = Color.white;
-                            swappingToucchCheck = true;
+                            swappingTouchCheck = true;
                         }
                     }
                 }
@@ -593,12 +599,29 @@ public class Board : MonoBehaviour
         }
 
     }
+
+    private void clearCheck()
+    {
+        if (point > targetScore)
+        {
+            Time.timeScale = 0;
+            Debug.Log("클리어");
+        }
+    }
+
     //보드체크를 시작하기위한부분
     public void SetBoardOutCheck()
     {
         boardOutCheck = true;
     }
 
+    public bool GetTouchChec()
+    {
+        return swappingTouchCheck;
+    }
 
-
+    public void SetPoint(int _point)
+    {
+        point = _point;
+    }
 }

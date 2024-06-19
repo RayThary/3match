@@ -98,7 +98,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   type: 2
-  boardDownSpeed: 8
+  boardDownSpeed: 12
   blockChangeSpeed: 4
   x: 0
   y: 0

@@ -11,6 +11,8 @@ TagManager:
   - Pink
   - Pureple
   - Orange
+  - Bomb
+  - BombDestroy
   layers:
   - Default
   - TransparentFX

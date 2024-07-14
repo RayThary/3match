@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.Burst.CompilerServices;
 using Unity.Mathematics;
-using Unity.VisualScripting;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -15,7 +14,7 @@ public class Board : MonoBehaviour
     [SerializeField] private float timeLimit = 60;
     public float GetTimer { get { return timeLimit; } }
 
-    [SerializeField] private int point = 0;
+    private int point = 0;
     public int GetPoint { get { return point; } }
 
     [SerializeField] private int width;
@@ -24,14 +23,19 @@ public class Board : MonoBehaviour
     public int Y { get { return height; } }
     [SerializeField] private GameObject[] blocksObj;
     public GameObject[,] blockArray;
+    [SerializeField] private GameObject bombBlockObjLR;
+    [SerializeField] private GameObject bombBlockObjUD;
 
-    [SerializeField] private List<GameObject> removeBlock = new List<GameObject>();
+    private List<GameObject> removeBlock = new List<GameObject>();
+    public List<GameObject> reblock { get { return removeBlock; } }
+
+    private int beforeNum = -1;
 
     private bool downMoving = false;
+    private bool newBlockCheck = false;//새 블록이 만들어졌는지 체크하고 내려주기위한불값
+    private bool blockClick = false;//블록클릭가능한지여부
 
-    private bool boardOutCheck = false;//오브젝트가 클릭가능한지 체크하기위한곳
-    private bool newBlockCheck = false;
-    private bool objClickCheck = false;
+    private int beforeCreateBlockInt = -1;
 
     private bool swappingTouchCheck = false;//오브젝트가 안움직이고 바꾸기위한준비가되었는지 체크해주는부분
 
@@ -44,15 +48,19 @@ public class Board : MonoBehaviour
 
     private bool moveSwap = false;
 
-    private bool swapMatchCheck = false;
-
     private int firstX = 0;
     private int firstY = 0;
     private int secondX = 0;
     private int secondY = 0;
 
+    private Fade fade;
     private bool isFade = false;
     private float fadeTimer = 0;
+
+    private bool isfail = false;
+
+    private BoxCollider2D box2d;
+    private Option option;
 
     private void Awake()
     {
@@ -64,30 +72,35 @@ public class Board : MonoBehaviour
         {
             Destroy(gameObject);
         }
-
-        Fade fade = FindObjectOfType<Fade>();
+        option = GetComponent<Option>();
+        box2d = GetComponent<BoxCollider2D>();
+        box2d.size = new Vector2(width, height);
+        box2d.offset = new Vector2((float)width/2, (float)height / 2);
+        fade = FindObjectOfType<Fade>();
         fade.FadeStart();
+        Time.timeScale = 1;
     }
 
     private void OnMouseDown()
     {
+        if (fade.GetFade() == true || Time.timeScale == 0 || blockClick == true)
+        {
+            return;
+        }
+
         if (swappingTouchCheck)
         {
             if (firstClick == true)
             {
                 //첫번째클릭인지 체크
+
                 boardInClickCheck();
-
-
-                firstClick = false;
             }
             else
             {
-                boardOutCheck = false;
+                blockClick = true;
                 boardInClickCheck();
                 blockSwap();
-
-                firstClick = true;
             }
         }
     }
@@ -99,26 +112,62 @@ public class Board : MonoBehaviour
         mousePos.x = Mathf.Floor(mousePos.x);
         mousePos.y = Mathf.Floor(mousePos.y);
 
-        if (firstClick)
+        if (mousePos.x >= 0 && mousePos.y >= 0 && mousePos.x < width && mousePos.y < height)
         {
-            firstBlock = blockArray[(int)mousePos.x, (int)mousePos.y];
-            firstX = (int)mousePos.x;
-            firstY = (int)mousePos.y;
-            firstBlock.GetComponent<BlockObj>().SetFirstBlockClick();
+            if (firstClick)
+            {
+                firstBlock = blockArray[(int)mousePos.x, (int)mousePos.y];
+                if (firstBlock.CompareTag("Bomb"))
+                {
+                    firstX = (int)mousePos.x;
+                    firstY = (int)mousePos.y;
+                    firstBlock.tag = "BombDestroy";
+                    bombDestroy();
+                }
+                else
+                {
+                    firstX = (int)mousePos.x;
+                    firstY = (int)mousePos.y;
+                    firstBlock.GetComponent<BlockObj>().SetFirstBlockClick();
+                    firstClick = false;
+                }
+
+
+            }
+            else
+            {
+                secondBlock = blockArray[(int)mousePos.x, (int)mousePos.y];
+                secondX = (int)mousePos.x;
+                secondY = (int)mousePos.y;
+                firstBlock.GetComponent<BlockObj>().SetSecondBlockClick();
+
+                firstClick = true;
+            }
         }
         else
         {
-            secondBlock = blockArray[(int)mousePos.x, (int)mousePos.y];
-            secondX = (int)mousePos.x;
-            secondY = (int)mousePos.y;
-            firstBlock.GetComponent<BlockObj>().SetSecondBlockClick();
+            if (firstClick == false)
+            {
+                secondBlock = null;
+                firstBlock.GetComponent<BlockObj>().SetSecondBlockClick();
+                firstClick = true;
+            }
         }
+
+
+
+
 
     }
 
     private void blockSwap()
     {
-        if (secondBlock.transform.position.x == firstBlock.transform.position.x - 1 && firstBlock.transform.position.y == secondBlock.transform.position.y)
+
+        if (secondBlock == null)
+        {
+            Debug.Log("외부 클릭");
+        }
+        else if (secondBlock.transform.position.x == firstBlock.transform.position.x - 1 && firstBlock.transform.position.y == secondBlock.transform.position.y)
         {
             moveSwap = true;
         }
@@ -136,8 +185,8 @@ public class Board : MonoBehaviour
         }
         else
         {
+            blockClick = false;
             Debug.Log("이동불가");
-            boardOutCheck = true;
         }
 
         if (moveSwap)
@@ -152,6 +201,7 @@ public class Board : MonoBehaviour
 
             firstBlock.GetComponent<BlockObj>().SetReturnCheck(true);
             moveSwap = false;
+
         }
     }
 
@@ -167,20 +217,69 @@ public class Board : MonoBehaviour
     private void startCreate()
     {
         blockArray = new GameObject[width, height];
-
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
                 int objNum = Random.Range(0, blocksObj.Length);
 
+                if (y > 1)
+                {
+                    int y1 = blockArray[x, y - 1].GetComponent<BlockObj>().GetBlockNum;
+                    int y2 = blockArray[x, y - 2].GetComponent<BlockObj>().GetBlockNum;
+
+                    if (objNum == y1 && y1 == y2)
+                    {
+                        while (objNum == y1)
+                        {
+                            objNum = Random.Range(0, blocksObj.Length);
+                        }
+                    }
+                }
+
+                beforeNum = objNum;
+
+                if (x > 1)
+                {
+                    int x1 = blockArray[x - 1, y].GetComponent<BlockObj>().GetBlockNum;
+                    int x2 = blockArray[x - 2, y].GetComponent<BlockObj>().GetBlockNum;
+                    if (x1 == x2 && x1 == objNum)
+                    {
+                        while (objNum == x1 || objNum == beforeNum)
+                        {
+                            objNum = Random.Range(0, blocksObj.Length);
+                        }
+                    }
+                }
+
                 Vector2 objPos = new Vector2(x, y);
                 GameObject obj = Instantiate(blocksObj[objNum], transform);
+
+                if (x > 1)
+                {
+                    if (obj.tag == blockArray[x - 1, y].tag && blockArray[x - 1, y].tag == blockArray[x - 2, y].tag)
+                    {
+                        while (objNum == beforeNum)
+                        {
+                            if (y > 1)
+                            {
+
+                            }
+                            else
+                            {
+                                objNum = Random.Range(0, blocksObj.Length);
+                            }
+                        }
+                    }
+                }
+
                 obj.transform.position = objPos;
                 obj.name = "(" + x + "," + y + ")";
                 BlockObj block = obj.GetComponent<BlockObj>();
+                block.SetBlockNum(objNum);
                 block.SetXY(x, y);
                 blockArray[x, y] = obj;
+
             }
         }
 
@@ -191,6 +290,7 @@ public class Board : MonoBehaviour
 
     public void SwapCheckBoard()
     {
+
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
@@ -205,27 +305,9 @@ public class Board : MonoBehaviour
     //이게 실행되면 모든오브젝트의 match를 체크를해준다
     public void CheckBoard()
     {
-        bool oneCheck = false;
-        for (int y = height - 1; y >= 0; y--)
+        for (int y = 0; y < height; y++)
         {
-            for (int x = width - 1; x >= 0; x--)
-            {
-                if (oneCheck)
-                {
-                    break;
-                }
-                if (blockArray[x, y] != null)
-                {
-                    lastBlockObj = blockArray[x, y];
-                    lastBlockObj.GetComponent<BlockObj>().SetisLast(true);
-                    oneCheck = true;
-                }
-            }
-        }
-
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
             {
                 if (blockArray[x, y] != null)
                 {
@@ -233,6 +315,7 @@ public class Board : MonoBehaviour
                 }
             }
         }
+        removeBoard();
     }
 
     //모든오브젝트가 체크를하고 가로 / 세로 줄이 어떻게 매치됬는지 체크를해주는부분
@@ -241,7 +324,6 @@ public class Board : MonoBehaviour
     {
         //세로줄 체크
         int matchNum = 0;
-
 
 
         for (int x = 0; x < width; x++)
@@ -263,25 +345,18 @@ public class Board : MonoBehaviour
                     matchNum = 0;
                 }
 
+                if (matchNum == 4)
+                {
+                    if (blockArray[x, y].tag == blockArray[x, y - 1].tag && blockArray[x, y - 1].tag == blockArray[x, y - 2].tag && blockArray[x, y - 2].tag == blockArray[x, y - 3].tag)
+                    {
+                        blockArray[x, y].GetComponent<BlockObj>().SetBombUDObj();
+                    }
 
-                if (matchNum == 3)
-                {
-
-                    point += 3;
-                    removeBlock.Add(blockArray[x, y]);
-                    removeBlock.Add(blockArray[x, y - 1]);
-                    removeBlock.Add(blockArray[x, y - 2]);
+                    blockArray[x, y].GetComponent<BlockObj>().SetBlockPoint(2);
                 }
-                else if (matchNum == 4)
+                else if (matchNum > 4)
                 {
-                    point += 2;
-                    removeBlock.Add(blockArray[x, y]);
-                }
-                else if (matchNum >= 5)
-                {
-                    point += 2;
-                    Debug.Log("폭탄추가");
-                    removeBlock.Add(blockArray[x, y]);
+                    blockArray[x, y].GetComponent<BlockObj>().SetBlockPoint(2);
                 }
 
 
@@ -304,62 +379,129 @@ public class Board : MonoBehaviour
                 if (blockArray[x, y].GetComponent<BlockObj>().GetMatchCheck == true)
                 {
                     matchNum++;
+
                 }
                 else
                 {
-
-
                     matchNum = 0;
                 }
 
 
-                if (matchNum == 3)
+                if (matchNum == 4)
                 {
-                    point += 3;
-                    removeBlock.Add(blockArray[x, y]);
-                    removeBlock.Add(blockArray[x - 1, y]);
-                    removeBlock.Add(blockArray[x - 2, y]);
+                    if (blockArray[x, y].tag == blockArray[x - 1, y].tag && blockArray[x - 1, y].tag == blockArray[x - 2, y].tag && blockArray[x - 2, y].tag == blockArray[x - 3, y].tag)
+                    {
+                        blockArray[x, y].GetComponent<BlockObj>().SetBombLRObj();
+                    }
+                    blockArray[x, y].GetComponent<BlockObj>().SetBlockPoint(2);
                 }
-                else if (matchNum == 4)
+                else if (matchNum > 4)
                 {
-                    point += 2;
-                    removeBlock.Add(blockArray[x, y]);
+                    blockArray[x, y].GetComponent<BlockObj>().SetBlockPoint(2);
                 }
-                else if (matchNum >= 5)
-                {
-                    point += 2;
-                    Debug.Log("폭탄추가");
-                    removeBlock.Add(blockArray[x, y]);
-                }
+
             }
             matchNum = 0;
         }
 
-        if (removeBlock.Count > 0)
-        {
-            destroyObj();
 
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (blockArray[x, y] != null)
+                {
+                    if (blockArray[x, y].GetComponent<BlockObj>().GetMatchCheck == true)
+                    {
+                        removeBlock.Add(blockArray[x, y]);
+                        blockArray[x, y] = null;
+                    }
+                }
+            }
         }
 
+
         //매치가 된부분이 생겼으면 삭제를해준다
+        if (removeBlock.Count > 0)
+        {
+            Invoke("destroyObj", 0.2f);//삭제 딜레이
+        }
         else
         {
-            Invoke("blockCreate", 0.5f);
+            Invoke("blockCreate", 0.2f);
         }
     }
 
     private void destroyObj()
     {
+
         for (int count = removeBlock.Count - 1; count >= 0; count--)
         {
             if (removeBlock[count] != null)
             {
+                if (removeBlock[count].GetComponent<BlockObj>().GetBombLRObj() == true)
+                {
+                    int bombX = (int)removeBlock[count].transform.position.x;
+                    int bombY = (int)removeBlock[count].transform.position.y;
+
+                    GameObject bomb = Instantiate(bombBlockObjLR, transform);
+
+                    bomb.transform.position = new Vector3(bombX, bombY, 0);
+                    blockArray[bombX, bombY] = bomb;
+                }
+                else if (removeBlock[count].GetComponent<BlockObj>().GetBombUDObj() == true)
+                {
+                    int bombX = (int)removeBlock[count].transform.position.x;
+                    int bombY = (int)removeBlock[count].transform.position.y;
+
+                    GameObject bomb = Instantiate(bombBlockObjUD, transform);
+
+                    bomb.transform.position = new Vector3(bombX, bombY, 0);
+                    blockArray[bombX, bombY] = bomb;
+                }
+
                 Destroy(removeBlock[count]);
-                removeBlock.RemoveAt(count);
+            }
+
+            if (count == removeBlock.Count - 1)
+            {
+                if (isFade == true)
+                {
+                    SoundManager.instance.SFXCreate(SoundManager.Clips.Block, 1, 0);
+                }
             }
         }
         removeBlock.Clear();
-        Invoke("blockDown", 0.1f);
+        blockDown();
+    }
+
+    private void bombDestroy()
+    {
+        if (firstBlock.GetComponent<BlockObj>().type == BlockType.BombLR)
+        {
+            for (int i = 0; i < width; i++)
+            {
+                if (blockArray[i, firstY].tag != "Bomb")
+                {
+                    removeBlock.Add(blockArray[i, firstY]);
+                    blockArray[i, firstY] = null;
+                }
+            }
+        }
+        else if (firstBlock.GetComponent<BlockObj>().type == BlockType.BombUD)
+        {
+            for (int i = 0; i < height; i++)
+            {
+                if (blockArray[firstX, i].tag != "Bomb")
+                {
+                    removeBlock.Add(blockArray[firstX, i]);
+                    blockArray[firstX, i] = null;
+                }
+            }
+        }
+
+        destroyObj();
+
     }
 
     private void blockDown()
@@ -369,88 +511,112 @@ public class Board : MonoBehaviour
         {
             for (int y = 0; y < height; y++)
             {
+
                 if (blockArray[x, y] == null)
                 {
                     nullCount++;
                 }
                 else if (nullCount > 0)
                 {
+
                     int yPos = y - nullCount;
                     GameObject downobj = blockArray[x, y];
                     downobj.GetComponent<BlockObj>().downMovingCheck(true);
-                    downobj.GetComponent<BlockObj>().SetXY(x, yPos);// SetTargetPos(new Vector2(x, y - nullCount));
+                    downobj.GetComponent<BlockObj>().SetXY(x, yPos);
                     blockArray[x, yPos] = downobj;
                     blockArray[x, yPos].name = "(" + x + ", " + yPos + ")";
                     blockArray[x, y] = null;
                 }
+
+
+
+                if (x == width - 1 && y == height - 1)
+                {
+                    downMoving = true;
+                }
             }
             nullCount = 0;
         }
-        downMoving = true;
+
+
     }
 
 
     private void blockCreate()
     {
-        bool createCheck = false;
+        bool endCheck = false;
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
                 if (blockArray[x, y] == null)
                 {
-                    createCheck = true;
+                    endCheck = false;
+                    break;
                 }
+                else
+                {
+                    endCheck = true;
+                }
+
+                if (x == width - 1 && y == height - 1)
+                {
+                    blockClick = false;
+                    return;
+                }
+            }
+            if (endCheck == false)
+            {
+                break;
             }
         }
 
-        if (createCheck)
+        for (int x = 0; x < width; x++)
         {
-            for (int x = 0; x < width; x++)
+            int createNum = 0;
+            for (int y = 0; y < height; y++)
             {
-                int createNum = 0;
-                for (int y = 0; y < height; y++)
+                if (blockArray[x, y] == null)
                 {
-                    if (blockArray[x, y] == null)
-                    {
-                        createNum++;
-                    }
+                    createNum++;
+                }
 
-                    if (y == height - 1)
+                if (y == height - 1)
+                {
+                    if (createNum > 0)
                     {
-                        if (createNum > 0)
+                        int posY = height;
+                        for (int i = 0; i < createNum; i++)
                         {
-                            int posY = height;
-                            for (int i = 0; i < createNum; i++)
+                            int objNum = Random.Range(0, blocksObj.Length);
+                            while (beforeCreateBlockInt == objNum)
                             {
-                                int objNum = Random.Range(0, blocksObj.Length);
-                                int objY = (height - 1) - i;
-
-                                Vector2 objPos = new Vector2(x, height + posY);
-                                GameObject obj = Instantiate(blocksObj[objNum], transform);
-                                obj.transform.position = objPos;
-                                obj.name = "(" + x + "," + objY + ")";
-
-                                obj.GetComponent<BlockObj>().SetXY(x, objY);
-                                blockArray[x, objY] = obj;
-                                obj.GetComponent<BlockObj>().downMovingCheck(true);
-                                posY--;
-
+                                objNum = Random.Range(0, blocksObj.Length);
                             }
+
+                            beforeCreateBlockInt = objNum;
+                            int objY = (height - 1) - i;
+
+                            Vector2 objPos = new Vector2(x, height + posY);
+                            GameObject obj = Instantiate(blocksObj[objNum], transform);
+                            obj.transform.position = objPos;
+                            obj.name = "(" + x + "," + objY + ")";
+
+                            obj.GetComponent<BlockObj>().SetXY(x, objY);
+                            blockArray[x, objY] = obj;
+                            obj.GetComponent<BlockObj>().downMovingCheck(true);
+                            posY--;
+
                         }
                     }
-
-
                 }
+
+
             }
-            objClickCheck = false;
-            Invoke("blockDown", 0.1f);
-            Invoke("newBlockCheckInvkoke", 0.2f);
         }
-        else
-        {
-            boardOutCheck = true;
-        }
+        Invoke("newBlockCheckInvkoke", 0.2f);
+
+
     }
 
     private void newBlockCheckInvkoke()
@@ -463,15 +629,24 @@ public class Board : MonoBehaviour
         allDownCheck();
         clickCheck();
         clearCheck();
+        failCheck();
 
         if (Input.GetKeyDown(KeyCode.X))
         {
+
             for (int x = 0; x < width; x++)
             {
                 for (int y = 0; y < height; y++)
                 {
+                    if (blockArray[x, y] == null)
+                    {
+                        Debug.Log($"{x},{y}==null");
+                    }
+                    else
+                    {
+                        Debug.Log($"{x},{y}=={blockArray[x, y]} tag = {blockArray[x, y].tag}");
 
-                    Debug.Log($"{x},{y}=={blockArray[x, y]} tag = {blockArray[x, y].tag}");
+                    }
 
                 }
             }
@@ -482,21 +657,18 @@ public class Board : MonoBehaviour
 
     private void fadeCheck()
     {
-        if (swappingTouchCheck)
+
+        if (isFade == false && swappingTouchCheck == true)
         {
+           
+            fadeTimer += Time.deltaTime;
             if (fadeTimer >= 1)
             {
                 isFade = true;
             }
-            else
-            {
-                fadeTimer += Time.deltaTime;
-            }
+
         }
-        else
-        {
-            fadeTimer = 0;
-        }
+
     }
 
     private void allDownCheck()
@@ -559,8 +731,8 @@ public class Board : MonoBehaviour
                         }
                         else
                         {
-                            objClickCheck = true;
                             newBlockCheck = false;
+                            CheckBoard();
                         }
                     }
                 }
@@ -624,18 +796,28 @@ public class Board : MonoBehaviour
 
     private void clearCheck()
     {
-        if (point > targetScore)
+        if (point >= targetScore)
         {
             Time.timeScale = 0;
-            Debug.Log("클리어");
+            option.IsClear();
         }
     }
 
-    //보드체크를 시작하기위한부분
-    public void SetBoardOutCheck()
+    private void failCheck()
     {
-        boardOutCheck = true;
+        if (isfail)
+        {
+            Time.timeScale = 0;
+            option.IsFail();
+        }
     }
+
+    public void SetBlockClick(bool _value)
+    {
+        blockClick = _value;
+    }
+
+
 
     public bool GetFade()
     {
@@ -645,5 +827,15 @@ public class Board : MonoBehaviour
     public void SetPoint(int _point)
     {
         point = _point;
+    }
+
+    public void SetIsFail()
+    {
+        isfail = true;
+    }
+
+    public void AddPoint(int _point)
+    {
+        point += _point;
     }
 }

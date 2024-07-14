@@ -10,6 +10,7 @@ public class TimeLimit : MonoBehaviour
     private float maxTime;
 
     private bool gameStart;
+
     void Start()
     {
         image = GetComponent<Image>();
@@ -29,6 +30,7 @@ public class TimeLimit : MonoBehaviour
             }
             else
             {
+                Board.Instance.SetIsFail();
                 gameStart = false;
             }
             
@@ -39,4 +41,6 @@ public class TimeLimit : MonoBehaviour
     {
         gameStart = true;
     }
+
+    
 }

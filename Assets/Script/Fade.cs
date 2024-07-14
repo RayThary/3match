@@ -12,11 +12,13 @@ public class Fade : MonoBehaviour
     {
         fadeImage = GetComponent<Image>();
         fadeImage.color = Color.black;
+        
 
     }
     private void Start()
     {
         color = fadeImage.color;
+        fadeImage.color = color;
     }
 
     void Update()
@@ -48,5 +50,10 @@ public class Fade : MonoBehaviour
     public void FadeStart()
     {
         isFade = true;
+    }
+
+    public bool GetFade()
+    {
+        return isFade;
     }
 }

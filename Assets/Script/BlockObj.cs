@@ -23,8 +23,8 @@ public class BlockObj : MonoBehaviour
     [SerializeField] private float boardDownSpeed = 4;
     [SerializeField] private float blockChangeSpeed = 4;
 
-    [SerializeField] private int x;
-    [SerializeField] private int y;//내가보기위한 x ,y 좌표 나중에 안보이게해주면됨
+    private int x;
+    private int y;
 
     private int blockNum = 0;
     public int GetBlockNum { get { return blockNum; } }
@@ -43,12 +43,12 @@ public class BlockObj : MonoBehaviour
 
     private bool returnMove = false;
 
-    [SerializeField] private bool matchCheck = false;
+    private bool matchCheck = false;
     public bool SetMatchCheck { set { matchCheck = value; } }
     public bool GetMatchCheck { get { return matchCheck; } }
 
-    [SerializeField] private bool isBombObjLR = false;
-    [SerializeField] private bool isBombObjUD = false;
+    private bool isBombObjLR = false;
+    private bool isBombObjUD = false;
 
     private SpriteRenderer spr;
     private Color sprA;
@@ -168,7 +168,7 @@ public class BlockObj : MonoBehaviour
             Board.Instance.blockArray[x, y] = second;
             x = beforeX;
             y = beforeY;
-            Board.Instance.blockArray[x, y] = gameObject;   
+            Board.Instance.blockArray[x, y] = gameObject;
             second.GetComponent<BlockObj>().SetReturnMove();
             returnMove = true;
         }

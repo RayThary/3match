@@ -8,10 +8,10 @@ using Random = UnityEngine.Random;
 public class Board : MonoBehaviour
 {
     public static Board Instance;
-    [SerializeField] private int targetScore = 100;
+    [Header("목표점수"),SerializeField] private int targetScore = 100;
     public int GetTargetScore { get { return targetScore; } }
 
-    [SerializeField] private float timeLimit = 60;
+    [Header("시간제한"),SerializeField] private float timeLimit = 60;
     public float GetTimer { get { return timeLimit; } }
 
     private int point = 0;
